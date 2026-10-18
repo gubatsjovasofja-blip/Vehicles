@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.ObjectModel;
+﻿
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using Vehicles.Core;
@@ -9,7 +9,10 @@ namespace Vehicles.WpfApp
 {
     public partial class MainWindow : Window
     {
-        private ObservableCollection<Vehicle> vehicles = new();
+        private Garage carGarage = new();
+        private Garage boatGarage = new();
+
+        private Vehicle? selectedVehicle;
 
         public MainWindow()
         {
@@ -17,73 +20,156 @@ namespace Vehicles.WpfApp
 
             // Tekstid Resources.resx failist
             Title = AppResources.WindowTitle;
-            VehiclesTitleText.Text = AppResources.VehiclesTitle;
+            CarGarageTitleText.Text = AppResources.CarGarageTitle;
+            BoatGarageTitleText.Text = AppResources.BoatGarageTitle;
             SelectedVehicleTitleText.Text = AppResources.SelectedVehicle;
             DistanceLabelText.Text = AppResources.DistanceLabel;
             AddCarButton.Content = AppResources.AddCarButton;
             AddBoatButton.Content = AppResources.AddBoatButton;
             AddAmphibiousButton.Content = AppResources.AddAmphibiousButton;
+            RemoveCarButton.Content = AppResources.RemoveButton;
+            RemoveBoatButton.Content = AppResources.RemoveButton;
             MoveButton.Content = AppResources.MoveButton;
             DriveButton.Content = AppResources.DriveButton;
             SwimButton.Content = AppResources.SwimButton;
-            RemoveButton.Content = AppResources.RemoveButton;
             LogTitleText.Text = AppResources.LogTitle;
 
-            VehicleList.ItemsSource = vehicles;
+            CarList.ItemsSource = carGarage.Vehicles;
+            BoatList.ItemsSource = boatGarage.Vehicles;
 
-            vehicles.Add(new Car("Volvo", "V60"));
-            vehicles.Add(new Boat("Bella", "600"));
-            vehicles.Add(new AmphibiousCar("Amphi", "X"));
-            VehicleList.SelectedIndex = 0;
+            // Mõlema garaaži teated lähevad logisse
+            carGarage.Message += AddLog;
+            boatGarage.Message += AddLog;
+
+            carGarage.Add(new Car("Volvo", "V60"));
+            carGarage.Add(new AmphibiousCar("Amphi", "X"));
+            boatGarage.Add(new Boat("Bella", "600"));
+
+            CarList.SelectedIndex = 0;
+        }
+
+        private void AddLog(string message)
+        {
+            LogList.Items.Add(message);
+            LogList.ScrollIntoView(message);
         }
 
         private void AddCar_Click(object sender, RoutedEventArgs e)
         {
-            vehicles.Add(new Car("Volvo", "V60"));
+            carGarage.Add(new Car("Volvo", "V60"));
         }
 
         private void AddBoat_Click(object sender, RoutedEventArgs e)
         {
-            vehicles.Add(new Boat("Bella", "600"));
+            boatGarage.Add(new Boat("Bella", "600"));
         }
 
         private void AddAmphibious_Click(object sender, RoutedEventArgs e)
         {
-            vehicles.Add(new AmphibiousCar("Amphi", "X"));
+            carGarage.Add(new AmphibiousCar("Amphi", "X"));
         }
 
-        private void VehicleList_SelectionChanged(
+        private void RemoveCar_Click(object sender, RoutedEventArgs e)
+        {
+            if (CarList.SelectedItem is Vehicle vehicle)
+            {
+                carGarage.Remove(vehicle);
+            }
+            else
+            {
+                MessageBox.Show(AppResources.SelectVehicle);
+            }
+        }
+
+        private void RemoveBoat_Click(object sender, RoutedEventArgs e)
+        {
+            if (BoatList.SelectedItem is Vehicle vehicle)
+            {
+                boatGarage.Remove(vehicle);
+            }
+            else
+            {
+                MessageBox.Show(AppResources.SelectVehicle);
+            }
+        }
+
+        private void CarList_SelectionChanged(
             object sender, SelectionChangedEventArgs e)
         {
-            if (VehicleList.SelectedItem is Vehicle vehicle)
+            if (CarList.SelectedItem is Vehicle vehicle)
             {
-                SelectedVehicleText.Text = vehicle.ToString();
-                UpdateOdometer(vehicle);
-
-                MoveButton.IsEnabled = true;
-                DriveButton.IsEnabled = vehicle is IDriveable;
-                SwimButton.IsEnabled = vehicle is ISwimmable;
+                BoatList.SelectedItem = null;
+                SelectVehicle(vehicle);
             }
+            else if (BoatList.SelectedItem == null)
+            {
+                ClearSelection();
+            }
+        }
+
+        private void BoatList_SelectionChanged(
+            object sender, SelectionChangedEventArgs e)
+        {
+            if (BoatList.SelectedItem is Vehicle vehicle)
+            {
+                CarList.SelectedItem = null;
+                SelectVehicle(vehicle);
+            }
+            else if (CarList.SelectedItem == null)
+            {
+                ClearSelection();
+            }
+        }
+
+        private void SelectVehicle(Vehicle vehicle)
+        {
+            selectedVehicle = vehicle;
+            SelectedVehicleText.Text = vehicle.ToString();
+
+            UpdateOdometer(vehicle);
+
+            MoveButton.IsEnabled = true;
+            DriveButton.IsEnabled = vehicle is IDriveable;
+            SwimButton.IsEnabled = vehicle is ISwimmable;
+        }
+
+        private void ClearSelection()
+        {
+            selectedVehicle = null;
+            SelectedVehicleText.Text = "";
+            OdometerText.Text = "";
+
+            MoveButton.IsEnabled = false;
+            DriveButton.IsEnabled = false;
+            SwimButton.IsEnabled = false;
+        }
+
+        private bool TryGetDistance(out double km)
+        {
+            if (!double.TryParse(DistanceTextBox.Text, out km) || km <= 0)
+            {
+                MessageBox.Show(AppResources.InvalidDistance);
+                return false;
+            }
+
+            return true;
         }
 
         private void Move_Click(object sender, RoutedEventArgs e)
         {
-            if (VehicleList.SelectedItem is not Vehicle vehicle)
+            if (selectedVehicle == null)
             {
                 MessageBox.Show(AppResources.SelectVehicle);
                 return;
             }
 
-            if (!double.TryParse(DistanceTextBox.Text, out double km))
-            {
-                MessageBox.Show(AppResources.InvalidDistance);
+            if (!TryGetDistance(out double km))
                 return;
-            }
 
             try
             {
-                LogList.Items.Add(vehicle.Move(km));
-                UpdateOdometer(vehicle);
+                AddLog(selectedVehicle.Move(km));
+                UpdateOdometer(selectedVehicle);
             }
             catch (ArgumentException)
             {
@@ -93,56 +179,39 @@ namespace Vehicles.WpfApp
 
         private void Drive_Click(object sender, RoutedEventArgs e)
         {
-            if (VehicleList.SelectedItem is IDriveable vehicle &&
-                double.TryParse(DistanceTextBox.Text, out double km))
+            if (selectedVehicle is not IDriveable vehicle)
+                return;
+
+            if (!TryGetDistance(out double km))
+                return;
+
+            try
             {
-                try
-                {
-                    LogList.Items.Add(vehicle.Drive(km));
-                    UpdateSelectedVehicle();
-                }
-                catch (ArgumentException)
-                {
-                    MessageBox.Show(AppResources.InvalidDistance);
-                }
+                AddLog(vehicle.Drive(km));
+                UpdateOdometer(selectedVehicle!);
+            }
+            catch (ArgumentException)
+            {
+                MessageBox.Show(AppResources.InvalidDistance);
             }
         }
 
         private void Swim_Click(object sender, RoutedEventArgs e)
         {
-            if (VehicleList.SelectedItem is ISwimmable vehicle &&
-                double.TryParse(DistanceTextBox.Text, out double km))
-            {
-                try
-                {
-                    LogList.Items.Add(vehicle.Swim(km));
-                    UpdateSelectedVehicle();
-                }
-                catch (ArgumentException)
-                {
-                    MessageBox.Show(AppResources.InvalidDistance);
-                }
-            }
-        }
+            if (selectedVehicle is not ISwimmable vehicle)
+                return;
 
-        private void Remove_Click(object sender, RoutedEventArgs e)
-        {
-            if (VehicleList.SelectedItem is Vehicle vehicle)
-            {
-                vehicles.Remove(vehicle);
-                LogList.Items.Add(AppResources.VehicleRemoved);
-            }
-            else
-            {
-                MessageBox.Show(AppResources.SelectVehicle);
-            }
-        }
+            if (!TryGetDistance(out double km))
+                return;
 
-        private void UpdateSelectedVehicle()
-        {
-            if (VehicleList.SelectedItem is Vehicle vehicle)
+            try
             {
-                UpdateOdometer(vehicle);
+                AddLog(vehicle.Swim(km));
+                UpdateOdometer(selectedVehicle!);
+            }
+            catch (ArgumentException)
+            {
+                MessageBox.Show(AppResources.InvalidDistance);
             }
         }
 

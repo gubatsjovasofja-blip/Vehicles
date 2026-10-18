@@ -126,6 +126,12 @@
   <data name="AddCarButton" xml:space="preserve">
     <value>Lisa auto</value>
   </data>
+  <data name="BoatGarageTitle" xml:space="preserve">
+    <value>Paatide garaaž</value>
+  </data>
+  <data name="CarGarageTitle" xml:space="preserve">
+    <value>Autode garaaž</value>
+  </data>
   <data name="DistanceLabel" xml:space="preserve">
     <value>Vahemaa</value>
   </data>

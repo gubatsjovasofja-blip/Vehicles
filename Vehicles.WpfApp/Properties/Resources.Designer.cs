@@ -88,6 +88,24 @@ namespace Vehicles.WpfApp.Properties {
         }
         
         /// <summary>
+        ///   Ищет локализованную строку, похожую на Paatide garaaž.
+        /// </summary>
+        internal static string BoatGarageTitle {
+            get {
+                return ResourceManager.GetString("BoatGarageTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Autode garaaž.
+        /// </summary>
+        internal static string CarGarageTitle {
+            get {
+                return ResourceManager.GetString("CarGarageTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Ищет локализованную строку, похожую на Vahemaa.
         /// </summary>
         internal static string DistanceLabel {
